@@ -1,43 +1,42 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 from os import listdir, rename
 from os.path import isfile, join
 import PIL.Image
+from datetime import datetime, timedelta
 
-MY_PATH = "/Users/jonastheis/Desktop/Cambodia"
-
-# find all wrong named images
-#files = filter(lambda x: "iOS" in x and x.endswith(".jpg"), [f for f in listdir(MY_PATH) if isfile(join(MY_PATH, f))])
-files = filter(lambda x: x.endswith(".jpg") or x.endswith(".JPG"), [f for f in listdir(MY_PATH) if isfile(join(MY_PATH, f))])
+INPUT_DATE_FORMAT = '%Y:%m:%d %H:%M:%S'
+OUTPUT_DATE_FORMAT = '%Y-%m-%d %H.%M.%S'
 
 
-print files
+class Renamer:
+    def __init__(self, path, time_shift):
+        self.path = path
+        self.time_shift = time_shift
+        self.count = 0
 
-for n in files:
-    try:
+    def start(self):
+        # get all files in folder
+        all_files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
+        # filter out only .jpgs
+        picture_paths = filter(lambda x: x.endswith(".jpg") or x.endswith(".JPG"), all_files)
 
-        img = PIL.Image.open(join(MY_PATH, n))
-        date_total = img._getexif()[306]
+        for p in picture_paths:
+            # catch all errors, e.g. no time in image encoded
+            try:
+                img = PIL.Image.open(join(self.path, p))
+                date_total = img._getexif()[306]
 
-        date_string, time_string = date_total.split()
+                img_datetime = datetime.strptime(date_total, INPUT_DATE_FORMAT)
 
-        time_string = time_string.replace(":", ".")
-        date_string = date_string.replace(":", "-")
+                # add timedelta if set
+                if self.time_shift is not 0:
+                    img_datetime = img_datetime + timedelta(hours=self.time_shift)
 
-        # optional: add hours to time
-        if False:
-            to_add = 9  # change to time shift
-            hour = int(time_string.split(".")[0])
-            hour += to_add
+                img_datetime_string = img_datetime.strftime(OUTPUT_DATE_FORMAT) + ".jpg"
+                rename(join(self.path, p), join(self.path, img_datetime_string))
 
-            time_string = "" + str(hour) + time_string[2:]
+                self.count += 1
 
+            except KeyError:
+                pass
 
-        date_total = date_string + " " + time_string + ".jpg"
-
-        rename(join(MY_PATH, n), join(MY_PATH, date_total))
-        print date_total
-
-    except KeyError:
-        pass
+        return self.count
