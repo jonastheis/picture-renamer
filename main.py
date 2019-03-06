@@ -1,13 +1,15 @@
 import sys
 from PySide2.QtWidgets import *
 from PySide2.QtCore import Qt
+from renamer import Renamer
 
 
 class MainWindowWidget(QWidget):
     def __init__(self):
         super(MainWindowWidget, self).__init__()
 
-        self.drop_zone = DropZoneWidget()
+        self.setWindowTitle('Picture Renamer')
+        self.drop_zone = DropZoneWidget(self)
         self.settings = SettingsWidget()
 
         # A Vertical layout to include the button layout and then the image
@@ -16,11 +18,15 @@ class MainWindowWidget(QWidget):
         layout.addWidget(QHLine())
         layout.addWidget(self.settings)
 
-
         self.setLayout(layout)
         self.setFixedSize(500, 500)
         self.show()
         self.setFocus()
+
+    def start_renamer(self, folder_path):
+        if folder_path:
+            count = Renamer(folder_path, self.settings.get_time_shift()).start()
+            self.drop_zone.set_successful_state(count)
 
 
 class QHLine(QFrame):
@@ -67,8 +73,11 @@ class SettingsWidget(QWidget):
 
 
 class DropZoneWidget(QWidget):
-    def __init__(self):
+    def __init__(self, main_widget):
         super(DropZoneWidget, self).__init__()
+        self.main_widget = main_widget
+        self.successful = False
+
         self.drop_label = QLabel('<font size=40>Drop parent folder</font>')
         self.drop_label.setAlignment(Qt.AlignCenter)
         self.or_label = QLabel('or')
@@ -77,15 +86,14 @@ class DropZoneWidget(QWidget):
         self.select_button.clicked.connect(self.select_button_click)
 
         # A Vertical layout to include the button layout and then the image
-        layout = QVBoxLayout()
-        layout.addStretch()
-        layout.addWidget(self.drop_label)
-        layout.addWidget(self.or_label)
-        layout.addWidget(self.select_button)
-        layout.addStretch()
+        self.info_layout = QVBoxLayout()
+        self.info_layout.addStretch()
+        self.info_layout.addWidget(self.drop_label)
+        self.info_layout.addWidget(self.or_label)
+        self.info_layout.addWidget(self.select_button)
+        self.info_layout.addStretch()
 
-
-        self.setLayout(layout)
+        self.setLayout(self.info_layout)
 
         # Enable dragging and dropping onto the GUI
         self.setAcceptDrops(True)
@@ -117,12 +125,26 @@ class DropZoneWidget(QWidget):
             e.ignore()
 
     def select_button_click(self):
-        path = QFileDialog.getExistingDirectory(self, 'Select folder')
-        self.set_folder(path)
+        if self.successful:
+            self.set_inital_state()
+        else:
+            path = QFileDialog.getExistingDirectory(self, 'Select folder')
+            self.set_folder(path)
 
     def set_folder(self, folder_name):
-        # TODO: call start rename from MainWindowWidget
-        print(folder_name)
+        self.main_widget.start_renamer(folder_name)
+
+    def set_inital_state(self):
+        self.successful = False
+        self.drop_label.setText('<font size=40>Drop parent folder</font>')
+        self.or_label.setText('or')
+        self.select_button.setText('Select parent folder')
+
+    def set_successful_state(self, count):
+        self.successful = True
+        self.drop_label.setText('<font size=40>Successfully renamed %s pictures</font>' % count)
+        self.or_label.setText('')
+        self.select_button.setText('Rename more pictures')
 
 
 if __name__ == '__main__':
