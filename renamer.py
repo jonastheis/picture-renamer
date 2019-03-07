@@ -8,15 +8,23 @@ OUTPUT_DATE_FORMAT = '%Y-%m-%d %H.%M.%S'
 
 
 class Renamer:
+    """
+    Renames pictures in path according to their encoded metadata
+    Optionally a time shift can be used to settle any time difference from the metadata
+    """
     def __init__(self, path, time_shift):
         self.path = path
         self.time_shift = time_shift
         self.count = 0
 
     def start(self):
+        """
+        Start the renaming with the given parameters
+        :return: count of successfully renamed pictures
+        """
         # get all files in folder
         all_files = [f for f in listdir(self.path) if isfile(join(self.path, f))]
-        # filter out only .jpgs
+        # filter out only .jpg
         picture_paths = filter(lambda x: x.endswith(".jpg") or x.endswith(".JPG"), all_files)
 
         for p in picture_paths:
